@@ -10,6 +10,7 @@ body{
     margin:0;
     font-family:Arial,sans-serif;
     background:#f8f6ef;
+    color:#222;
 }
 
 .screen{
@@ -18,11 +19,15 @@ body{
     padding:25px;
 }
 
+.hidden{
+    display:none;
+}
+
 .button{
     width:100%;
     padding:18px;
     margin:15px 0;
-    font-size:24px;
+    font-size:22px;
     border-radius:14px;
     border:1px solid #ddd;
     background:white;
@@ -32,9 +37,11 @@ body{
 .row{
     display:flex;
     justify-content:space-between;
-    font-size:22px;
+    align-items:center;
+    font-size:21px;
     padding:18px 0;
     border-bottom:1px solid #ddd;
+    cursor:pointer;
 }
 
 textarea{
@@ -44,10 +51,8 @@ textarea{
     padding:15px;
     box-sizing:border-box;
     border-radius:10px;
-}
-
-.hidden{
-    display:none;
+    border:1px solid #ccc;
+    resize:none;
 }
 
 .back{
@@ -55,8 +60,42 @@ textarea{
     font-size:20px;
     margin-bottom:20px;
 }
-</style>
 
+.note{
+    background:white;
+    border:1px solid #ddd;
+    border-radius:12px;
+    padding:15px;
+    margin:12px 0;
+}
+
+.note-text{
+    font-size:18px;
+    white-space:pre-wrap;
+}
+
+.note-date{
+    font-size:12px;
+    color:#777;
+    margin-top:10px;
+}
+
+.delete-button{
+    margin-top:12px;
+    border:none;
+    background:#f4e7e7;
+    color:#a33;
+    padding:8px 12px;
+    border-radius:8px;
+    cursor:pointer;
+}
+
+.empty{
+    color:#777;
+    text-align:center;
+    margin-top:40px;
+}
+</style>
 </head>
 
 <body>
@@ -75,12 +114,12 @@ textarea{
 
 <div class="row">
 <span>Bugün</span>
-<span>2</span>
+<span>0</span>
 </div>
 
-<div class="row">
-<span>Bu Hafta</span>
-<span>5</span>
+<div class="row" onclick="openNotes()">
+<span>Kayıtlı Notlar</span>
+<span id="noteCount">0</span>
 </div>
 
 </div>
@@ -92,29 +131,133 @@ textarea{
 ← Geri
 </div>
 
-<h2>Notunu yaz</h2>
+<textarea
+id="noteInput"
+placeholder="Aklından geçenleri yaz..."
+autofocus></textarea>
 
-<textarea placeholder="Aklından geçenleri yaz..."></textarea>
-
-<br><br>
-
-<button class="button">
-Kaydet
+<button class="button" onclick="saveNote()">
+Bitir
 </button>
 
 </div>
 
+
+<div id="notesScreen" class="screen hidden">
+
+<div class="back" onclick="goHome()">
+← Geri
+</div>
+
+<h2>Kayıtlı Notlar</h2>
+
+<div id="notesList"></div>
+
+</div>
+
+
 <script>
 
+let notes = JSON.parse(localStorage.getItem("nuvistaNotes")) || [];
+
 function openWrite(){
-document.getElementById("home").classList.add("hidden");
-document.getElementById("writeScreen").classList.remove("hidden");
+    document.getElementById("home").classList.add("hidden");
+    document.getElementById("notesScreen").classList.add("hidden");
+    document.getElementById("writeScreen").classList.remove("hidden");
+
+    setTimeout(() => {
+        document.getElementById("noteInput").focus();
+    }, 100);
+}
+
+function openNotes(){
+    document.getElementById("home").classList.add("hidden");
+    document.getElementById("writeScreen").classList.add("hidden");
+    document.getElementById("notesScreen").classList.remove("hidden");
+    renderNotes();
 }
 
 function goHome(){
-document.getElementById("writeScreen").classList.add("hidden");
-document.getElementById("home").classList.remove("hidden");
+    document.getElementById("writeScreen").classList.add("hidden");
+    document.getElementById("notesScreen").classList.add("hidden");
+    document.getElementById("home").classList.remove("hidden");
+    document.getElementById("noteInput").value = "";
+    updateNoteCount();
 }
+
+function saveNote(){
+    const input = document.getElementById("noteInput");
+    const text = input.value.trim();
+
+    if(text === ""){
+        alert("Not boş bırakılamaz.");
+        return;
+    }
+
+    const newNote = {
+        id: Date.now(),
+        text: text,
+        date: new Date().toLocaleString("tr-TR")
+    };
+
+    notes.unshift(newNote);
+
+    localStorage.setItem("nuvistaNotes", JSON.stringify(notes));
+
+    input.value = "";
+
+    openNotes();
+    updateNoteCount();
+}
+
+function renderNotes(){
+    const notesList = document.getElementById("notesList");
+
+    if(notes.length === 0){
+        notesList.innerHTML =
+        '<div class="empty">Henüz kayıtlı not yok.</div>';
+        return;
+    }
+
+    notesList.innerHTML = "";
+
+    notes.forEach(note => {
+        const noteElement = document.createElement("div");
+        noteElement.className = "note";
+
+        noteElement.innerHTML = `
+            <div class="note-text">${escapeHtml(note.text)}</div>
+            <div class="note-date">${note.date}</div>
+            <button class="delete-button"
+            onclick="deleteNote(${note.id})">
+            Sil
+            </button>
+        `;
+
+        notesList.appendChild(noteElement);
+    });
+}
+
+function deleteNote(id){
+    notes = notes.filter(note => note.id !== id);
+
+    localStorage.setItem("nuvistaNotes", JSON.stringify(notes));
+
+    renderNotes();
+    updateNoteCount();
+}
+
+function updateNoteCount(){
+    document.getElementById("noteCount").textContent = notes.length;
+}
+
+function escapeHtml(text){
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+updateNoteCount();
 
 </script>
 
